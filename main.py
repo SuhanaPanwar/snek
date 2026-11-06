@@ -9,9 +9,10 @@ clock = pygame.time.Clock()
 pygame.display.set_caption("☆bubbl3wr4p!☆")
 
 player_pos = pygame.Vector2(screen.get_width() / 2, screen.get_height() / 2)
+facing = pygame.Vector2(1,0)
 
 froggie = pygame.image.load("imgs/magic froggie.png").convert_alpha()
-froggie = pygame.transform.scale(froggie, (175, 175))
+froggie = pygame.transform.scale(froggie, (160, 175))
 
 potion = pygame.image.load("imgs/potion bottle.png").convert_alpha()
 potion = pygame.transform.scale(potion, (150, 150))
@@ -24,6 +25,7 @@ charge_timer = 0
 charge_speed = 450
 potion_mode = "float"
 mode_timer = 0
+
 spells = []
 spell_speed = 400
 
@@ -35,21 +37,25 @@ while running:
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
-                spells.append(player_pos.copy())
+                spells.append([player_pos.copy(), facing.copy()])
 
     keys = pygame.key.get_pressed()
 
     if keys[pygame.K_w]:
         player_pos.y -= 300 * dt
+        facing = pygame.Vector2(0, -1)
 
     if keys[pygame.K_s]:
         player_pos.y += 300 * dt
+        facing = pygame.Vector2(0, 1)
 
     if keys[pygame.K_a]:
         player_pos.x -= 300 * dt
+        facing = pygame.Vector2(-1, 0)
 
     if keys[pygame.K_d]:
         player_pos.x += 300 * dt
+        facing = pygame.Vector2(1, 0)
 
     player_pos.x = max(39, min(player_pos.x, 746))
     player_pos.y = max(39, min(player_pos.y, 560))
@@ -110,14 +116,14 @@ while running:
     potion_pos.y = max(75, min(potion_pos.y, 525))
 
     for spell in spells:
-        spell.x += spell_speed * dt
+        spell[0] += spell[1] * spell_speed * dt
 
     screen.fill("darkolivegreen4")
     screen.blit(froggie, froggie.get_rect(center = player_pos))
     screen.blit(potion, potion.get_rect(center = potion_pos))
 
     for spell in spells:
-        pygame.draw.circle(screen, "plum1", spell, 10)
+        pygame.draw.circle(screen, "darkorchid4", spell[0], 10)
 
     pygame.display.flip()
     dt = clock.tick(60) / 1000
