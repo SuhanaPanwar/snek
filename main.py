@@ -16,9 +16,14 @@ froggie = pygame.transform.scale(froggie, (160, 175))
 
 potion = pygame.image.load("imgs/potion bottle.png").convert_alpha()
 potion = pygame.transform.scale(potion, (150, 150))
+
+potion_red = potion.copy()
+potion_red.fill((255, 60, 60, 255), special_flags = pygame.BLEND_RGBA_MULT)
+
 potion_pos = pygame.Vector2(650, 200)
 potion_speed = 200
 potion_direction = -1
+
 charge_direction = pygame.Vector2(0, 0)
 charge_state = "aim"
 charge_timer = 0
@@ -29,6 +34,19 @@ mode_timer = 0
 spells = []
 spell_speed = 400
 
+potion_health = 5
+potion_flash_timer = 0
+
+game_state = "playing"
+font = pygame.font.Font(None, 65)
+
+victory_overlay = pygame.Surface((800, 600))
+victory_overlay.set_alpha(190)
+victory_overlay.fill((0, 0, 0))
+
+victory_text = font.render("FROGGIE WINS!", True, "plum1")
+victory_rect = victory_text.get_rect(center = (400, 600))
+
 while running:
 
     for event in pygame.event.get():
@@ -36,94 +54,132 @@ while running:
             running = False
 
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE:
+            if event.key == pygame.K_SPACE and game_state == "playing":
                 spells.append([player_pos.copy(), facing.copy()])
 
-    keys = pygame.key.get_pressed()
+    if game_state == "playing":
+            
+        keys = pygame.key.get_pressed()
 
-    if keys[pygame.K_w]:
-        player_pos.y -= 300 * dt
-        facing = pygame.Vector2(0, -1)
+        if keys[pygame.K_w]:
+            player_pos.y -= 300 * dt
+            facing = pygame.Vector2(0, -1)
 
-    if keys[pygame.K_s]:
-        player_pos.y += 300 * dt
-        facing = pygame.Vector2(0, 1)
+        if keys[pygame.K_s]:
+            player_pos.y += 300 * dt
+            facing = pygame.Vector2(0, 1)
 
-    if keys[pygame.K_a]:
-        player_pos.x -= 300 * dt
-        facing = pygame.Vector2(-1, 0)
+        if keys[pygame.K_a]:
+            player_pos.x -= 300 * dt
+            facing = pygame.Vector2(-1, 0)
 
-    if keys[pygame.K_d]:
-        player_pos.x += 300 * dt
-        facing = pygame.Vector2(1, 0)
+        if keys[pygame.K_d]:
+            player_pos.x += 300 * dt
+            facing = pygame.Vector2(1, 0)
 
-    player_pos.x = max(39, min(player_pos.x, 746))
-    player_pos.y = max(39, min(player_pos.y, 560))
-    
-    mode_timer += dt
+        player_pos.x = max(39, min(player_pos.x, 746))
+        player_pos.y = max(39, min(player_pos.y, 560))
+        
+        mode_timer += dt
 
-    if mode_timer >= 3:
-        mode_timer = 0
+        if mode_timer >= 3:
+            mode_timer = 0
 
-        if potion_mode == "float":
-            potion_mode = "chase"
+            if potion_mode == "float":
+                potion_mode = "chase"
 
-        elif potion_mode == "chase":
-            potion_mode = "charge"
-            charge_state = "aim"
-            charge_timer = 0
-
-        else:
-            potion_mode = "float"
-
-    if potion_mode == "float":
-        potion_pos.x += 120 * potion_direction * dt
-
-        if potion_pos.x <= 75:
-            potion_direction = 1
-
-        elif potion_pos.x >= 725:
-            potion_direction = -1
-
-    elif potion_mode == "chase":
-        direction = player_pos - potion_pos
-
-        if direction.length() > 0:
-            direction = direction.normalize()
-            potion_pos += direction * potion_speed * dt
-
-    elif potion_mode == "charge":
-        charge_timer += dt
-
-        if charge_state == "aim":
-            if charge_timer >= 0.8:
-                charge_direction = player_pos - potion_pos
-
-                if charge_direction.length() > 0:
-                    charge_direction = charge_direction.normalize()
-
-                charge_state = "dash"
-                charge_timer = 0
-
-        elif charge_state == "dash":
-            potion_pos += charge_direction * charge_speed * dt
-
-            if charge_timer >= 0.5:
+            elif potion_mode == "chase":
+                potion_mode = "charge"
                 charge_state = "aim"
                 charge_timer = 0
 
-    potion_pos.x = max(75, min(potion_pos.x, 725))
-    potion_pos.y = max(75, min(potion_pos.y, 525))
+            else:
+                potion_mode = "float"
 
-    for spell in spells:
-        spell[0] += spell[1] * spell_speed * dt
+        if potion_mode == "float":
+            potion_pos.x += 120 * potion_direction * dt
+
+            if potion_pos.x <= 75:
+                potion_direction = 1
+
+            elif potion_pos.x >= 725:
+                potion_direction = -1
+
+        elif potion_mode == "chase":
+            direction = player_pos - potion_pos
+
+            if direction.length() > 0:
+                direction = direction.normalize()
+                potion_pos += direction * potion_speed * dt
+
+        elif potion_mode == "charge":
+            charge_timer += dt
+
+            if charge_state == "aim":
+                if charge_timer >= 0.8:
+                    charge_direction = player_pos - potion_pos
+
+                    if charge_direction.length() > 0:
+                        charge_direction = charge_direction.normalize()
+
+                    charge_state = "dash"
+                    charge_timer = 0
+
+            elif charge_state == "dash":
+                potion_pos += charge_direction * charge_speed * dt
+
+                if charge_timer >= 0.5:
+                    charge_state = "aim"
+                    charge_timer = 0
+
+        potion_pos.x = max(75, min(potion_pos.x, 725))
+        potion_pos.y = max(75, min(potion_pos.y, 525))
+
+        for spell in spells:
+            spell[0] += spell[1] * spell_speed * dt
+
+        for spell in spells[:]:
+            spell_pos = spell[0]
+
+            if potion_health > 0 and spell_pos.distance_to(potion_pos) < 65:
+                potion_health = max(0, potion_health -1)
+                potion_flash_timer = 0.3
+                spells.remove(spell)
+                print("Potion health:", potion_health)
+
+                if potion_health == 0:
+                    game_state = "victory"
+
+    if potion_flash_timer > 0:
+        potion_flash_timer = max(0, potion_flash_timer - dt)
 
     screen.fill("darkolivegreen4")
-    screen.blit(froggie, froggie.get_rect(center = player_pos))
-    screen.blit(potion, potion.get_rect(center = potion_pos))
+    pygame.display.set_caption(f"☆bubbl3wr4p!☆ | Potion HP: {potion_health}")
 
+    screen.blit(froggie, froggie.get_rect(center = player_pos))
+
+    if potion_flash_timer > 0:
+        screen.blit(potion_red, potion_red.get_rect(center = potion_pos))
+
+    else:
+        screen.blit(potion, potion.get_rect(center = potion_pos))
+
+    
     for spell in spells:
         pygame.draw.circle(screen, "darkorchid4", spell[0], 10)
+
+    pygame.display.flip()
+
+    if game_state == "victory":
+        overlay = pygame.Surface((800, 600))
+        overlay.set_alpha(190)
+        overlay.fill((0, 0, 0))
+        screen.blit(overlay, (0, 0))
+
+        victory_text = font.render("FROGGIE WINS!", True, "plum1")
+        text_rect = victory_text.get_rect(center=(400, 300))
+
+        screen.blit(victory_text, text_rect)
 
     pygame.display.flip()
     dt = clock.tick(60) / 1000

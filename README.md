@@ -7,11 +7,12 @@ Main Idea:
 
 user is a magical frog, you made a potion that went wrong, now the potion attacks you :D
 
-Instructions:
+Info:
 
 use wasd to move
 space to shoot
-the potion shoots where the user is facing
+potion shoots where the user is facing
+potion ceases after five hits
 
 More About the Game:
 
