@@ -14,6 +14,9 @@ facing = pygame.Vector2(1,0)
 froggie = pygame.image.load("imgs/magic froggie.png").convert_alpha()
 froggie = pygame.transform.scale(froggie, (160, 175))
 
+froggie_red = froggie.copy()
+froggie_red.fill((255, 60, 60, 255), special_flags = pygame.BLEND_RGBA_MULT)
+
 potion = pygame.image.load("imgs/potion bottle.png").convert_alpha()
 potion = pygame.transform.scale(potion, (150, 150))
 
@@ -34,8 +37,15 @@ mode_timer = 0
 spells = []
 spell_speed = 400
 
+enemy_spells = []
+enemy_spell_speed = 250
+enemy_shoot_timer = 0
+
 potion_health = 5
 potion_flash_timer = 0
+
+froggie_health = 3 
+froggie_invincible_timer = 0
 
 game_state = "playing"
 font = pygame.font.Font(None, 65)
@@ -45,7 +55,10 @@ victory_overlay.set_alpha(190)
 victory_overlay.fill((0, 0, 0))
 
 victory_text = font.render("FROGGIE WINS!", True, "plum1")
-victory_rect = victory_text.get_rect(center = (400, 600))
+victory_rect = victory_text.get_rect(center = (400, 300))
+
+game_over_text = font.render("GAME OVER!", True, "plum1")
+game_over_rect = game_over_text.get_rect(center = (400, 300))
 
 while running:
 
@@ -58,7 +71,7 @@ while running:
                 spells.append([player_pos.copy(), facing.copy()])
 
     if game_state == "playing":
-            
+
         keys = pygame.key.get_pressed()
 
         if keys[pygame.K_w]:
@@ -79,6 +92,17 @@ while running:
 
         player_pos.x = max(39, min(player_pos.x, 746))
         player_pos.y = max(39, min(player_pos.y, 560))
+
+        enemy_shoot_timer += dt
+
+        if enemy_shoot_timer > 2:
+            enemy_shoot_timer = 0
+
+            direction = player_pos - potion_pos
+
+            if direction.length() > 0:
+                direction = direction.normalize()
+                enemy_spells.append([potion_pos.copy(), direction])
         
         mode_timer += dt
 
@@ -138,10 +162,27 @@ while running:
         for spell in spells:
             spell[0] += spell[1] * spell_speed * dt
 
+        for enemy_spell in enemy_spells:
+            enemy_spell[0] += enemy_spell[1] * enemy_spell_speed * dt
+
+        for enemy_spell in enemy_spells[:]:
+            enemy_spell_pos = enemy_spell[0]
+
+            if enemy_spell_pos.distance_to(player_pos) < 45:
+                enemy_spells.remove(enemy_spell)
+
+                if froggie_invincible_timer <= 0:
+                    froggie_health = max(0, froggie_health - 1)
+                    froggie_invincible_timer = 1.0
+                    print("Froggie HP:", froggie_health)
+
+                    if froggie_health == 0:
+                        game_state = "game_over"
+
         for spell in spells[:]:
             spell_pos = spell[0]
 
-            if potion_health > 0 and spell_pos.distance_to(potion_pos) < 65:
+            if game_state == "playing" and potion_health > 0 and spell_pos.distance_to(potion_pos) < 65:
                 potion_health = max(0, potion_health -1)
                 potion_flash_timer = 0.3
                 spells.remove(spell)
@@ -153,10 +194,17 @@ while running:
     if potion_flash_timer > 0:
         potion_flash_timer = max(0, potion_flash_timer - dt)
 
-    screen.fill("darkolivegreen4")
-    pygame.display.set_caption(f"☆bubbl3wr4p!☆ | Potion HP: {potion_health}")
+    if froggie_invincible_timer > 0:
+        froggie_invincible_timer = max(0, froggie_invincible_timer - dt)
 
-    screen.blit(froggie, froggie.get_rect(center = player_pos))
+    screen.fill("darkolivegreen4")
+    pygame.display.set_caption(f"☆bubbl3wr4p!☆ | Froggie HP: {froggie_health} | Potion HP: {potion_health}")
+
+    if froggie_invincible_timer > 0:
+        screen.blit(froggie_red, froggie_red.get_rect(center = player_pos))
+
+    else:
+        screen.blit(froggie, froggie.get_rect(center = player_pos))
 
     if potion_flash_timer > 0:
         screen.blit(potion_red, potion_red.get_rect(center = potion_pos))
@@ -168,18 +216,18 @@ while running:
     for spell in spells:
         pygame.draw.circle(screen, "darkorchid4", spell[0], 10)
 
-    pygame.display.flip()
+    for enemy_spell in enemy_spells:
+        pygame.draw.circle(screen, "hotpink2", enemy_spell[0], 12)
 
     if game_state == "victory":
-        overlay = pygame.Surface((800, 600))
-        overlay.set_alpha(190)
-        overlay.fill((0, 0, 0))
-        screen.blit(overlay, (0, 0))
 
-        victory_text = font.render("FROGGIE WINS!", True, "plum1")
-        text_rect = victory_text.get_rect(center=(400, 300))
+        screen.blit(victory_overlay, (0, 0))
+        screen.blit(victory_text, victory_rect)
 
-        screen.blit(victory_text, text_rect)
+    elif game_state == "game_over":
+
+        screen.blit(victory_overlay, (0, 0))
+        screen.blit(game_over_text, game_over_rect)
 
     pygame.display.flip()
     dt = clock.tick(60) / 1000
