@@ -1,4 +1,5 @@
 import pygame
+import cv2
 
 pygame.init()
 
@@ -59,6 +60,56 @@ victory_rect = victory_text.get_rect(center = (400, 300))
 
 game_over_text = font.render("GAME OVER!", True, "plum1")
 game_over_rect = game_over_text.get_rect(center = (400, 300))
+
+def play_intro():
+    video = cv2.VideoCapture("intro.mp4")
+
+    if not video.isOpened():
+        print("Couldn't open intro.mp4")
+        return True
+
+    fps = video.get(cv2.CAP_PROP_FPS)
+
+    if fps <= 0:
+        fps = 30
+
+    intro_clock = pygame.time.Clock()
+
+    while video.isOpened():
+
+        for event in pygame.event.get():
+
+            if event.type == pygame.QUIT:
+                video.release()
+                return False
+
+            if event.type == pygame.KEYDOWN:
+
+                if event.key == pygame.K_SPACE:
+                    video.release()
+                    return True
+
+        success, frame = video.read()
+
+        if not success:
+            break
+
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame = cv2.resize(frame, (800, 600))
+
+        surface = pygame.image.frombuffer(
+            frame.tobytes(), (800, 600), "RGB"
+        )        
+
+        screen.blit(surface, (0, 0))
+        pygame.display.flip()
+
+        intro_clock.tick(fps)
+
+    video.release()
+    return True
+
+running = play_intro()
 
 while running:
 
